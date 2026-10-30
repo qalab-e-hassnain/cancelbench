@@ -1,0 +1,25 @@
+{
+  "experiment": "cancelbench-fixed-grid-v1",
+  "time_unit": "virtual milliseconds",
+  "python": "3.14.6",
+  "scenario_count": 1764,
+  "run_count": 10584,
+  "scenario_sha256": "06c7052a9356eacba860d370fd7c7cf20d7ff1f90ec1b91f67ecca2e38f85f2a",
+  "source_sha256": {
+    "__init__.py": "03e54c463149ba702dac409dc5d0b0b063c6527f216655bcb30bc698fe1fe1b7",
+    "audit.py": "45d2feb73e2e215ba97ca924c9739bb8b5c85b1798de64bd7183b823076488a2",
+    "demo.py": "0906b27f3d7c0b4f7458aa8c2285fbe4ce904d8a3dc490c275c8372c89de12e5",
+    "run.py": "168f943b4466030bede503b5956aa9449471dfd618da78fd9705223a0c1a5db4",
+    "simulator.py": "8b7c8dda4e23e30975f96fe627a7f957b1130ea220469ee82bc5152675b141b9"
+  },
+  "artifacts_sha256": {
+    "by_kind.json": "c2c2fd9156d7c1f8b822c2b9d5cdaf901d2b33744523c9b1f89d2dd4096a4253",
+    "runs.csv": "ba85774a8bbd8a18e2dd00d5fdca3188563bc9de7154c85cc3b9327e4971096a",
+    "scenarios.jsonl": "06c7052a9356eacba860d370fd7c7cf20d7ff1f90ec1b91f67ecca2e38f85f2a",
+    "sensitivity.json": "a8abc3fca168ccd7771459a0ca93387615192131adb3deaf97abfc04cc81d264",
+    "summary.json": "9eab62dbc16fd8d64927ed691f0741dd4fc71d2551ece55898c266e977e3e8c4",
+    "summary.md": "cec4bf600148866b6a7e03ae3086181f5f5a3df23a38832dcea821eb7229b82d",
+    "traces.jsonl.gz": "5bab7989bc93ea9d8a675a03c9e8d22e252f36e3d63c8c526ad30e9f9295f6e0"
+  },
+  "scope": "Oracle intent events; no audio, LLM, network, real SQL or human participants."
+}

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cancelbench"
+version = "0.1.0"
+description = "An oracle-intent simulation study of cancellation and commit timing"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+cancelbench = "cancelbench.run:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

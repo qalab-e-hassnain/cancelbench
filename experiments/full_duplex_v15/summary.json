@@ -1,0 +1,14 @@
+{
+  "dataset": "Full-Duplex-Bench v1.5",
+  "acquired_at": "2026-10-30",
+  "records": 498,
+  "annotation_policy": "conservative_category_mapping",
+  "event_class_counts": {
+    "unclassified": 200,
+    "non_cancellation_overlap": 298
+  },
+  "explicit_cancellation_records": 0,
+  "policy_evaluations_claimed": 0,
+  "source_audio_committed": false,
+  "source_transcripts_committed": false
+}

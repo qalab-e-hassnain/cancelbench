@@ -1,0 +1,242 @@
+{
+  "scope": "Local asyncio runtime, deterministic barriers, SQLite database and notification ledger; no external delivery or speech.",
+  "contract": "After cancellation receipt, no older-version commit or notification may be accepted at its authoritative boundary. Earlier committed assignment is compensated; emitted notifications persist.",
+  "cases": [
+    {
+      "stage": "before_entry",
+      "authoritative": false,
+      "final_empty": true,
+      "prevented": true,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 0,
+      "acknowledgment_at_quiescence": "prevented",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "paused_before_entry"
+        },
+        {
+          "sequence": 1,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 2,
+          "event": "application_check_rejected"
+        }
+      ]
+    },
+    {
+      "stage": "after_check",
+      "authoritative": false,
+      "final_empty": false,
+      "prevented": false,
+      "received_stale_commit": true,
+      "received_stale_notification": true,
+      "notification_history_count": 1,
+      "acknowledgment_at_quiescence": "notification_already_emitted",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "paused_after_check"
+        },
+        {
+          "sequence": 2,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 3,
+          "event": "committed"
+        },
+        {
+          "sequence": 4,
+          "event": "notified"
+        }
+      ]
+    },
+    {
+      "stage": "after_commit",
+      "authoritative": false,
+      "final_empty": true,
+      "prevented": false,
+      "received_stale_commit": false,
+      "received_stale_notification": true,
+      "notification_history_count": 1,
+      "acknowledgment_at_quiescence": "notification_already_emitted",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "committed"
+        },
+        {
+          "sequence": 2,
+          "event": "paused_after_commit"
+        },
+        {
+          "sequence": 3,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 4,
+          "event": "notified"
+        }
+      ]
+    },
+    {
+      "stage": "after_notification",
+      "authoritative": false,
+      "final_empty": true,
+      "prevented": false,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 1,
+      "acknowledgment_at_quiescence": "notification_already_emitted",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "committed"
+        },
+        {
+          "sequence": 2,
+          "event": "notified"
+        },
+        {
+          "sequence": 3,
+          "event": "paused_after_notification"
+        },
+        {
+          "sequence": 4,
+          "event": "cancellation_received_and_compensated"
+        }
+      ]
+    },
+    {
+      "stage": "before_entry",
+      "authoritative": true,
+      "final_empty": true,
+      "prevented": true,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 0,
+      "acknowledgment_at_quiescence": "prevented",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "paused_before_entry"
+        },
+        {
+          "sequence": 1,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 2,
+          "event": "application_check_rejected"
+        }
+      ]
+    },
+    {
+      "stage": "after_check",
+      "authoritative": true,
+      "final_empty": true,
+      "prevented": true,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 0,
+      "acknowledgment_at_quiescence": "prevented",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "paused_after_check"
+        },
+        {
+          "sequence": 2,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 3,
+          "event": "commit_rejected"
+        }
+      ]
+    },
+    {
+      "stage": "after_commit",
+      "authoritative": true,
+      "final_empty": true,
+      "prevented": false,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 0,
+      "acknowledgment_at_quiescence": "database_effect_compensated",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "committed"
+        },
+        {
+          "sequence": 2,
+          "event": "paused_after_commit"
+        },
+        {
+          "sequence": 3,
+          "event": "cancellation_received_and_compensated"
+        },
+        {
+          "sequence": 4,
+          "event": "notification_rejected"
+        }
+      ]
+    },
+    {
+      "stage": "after_notification",
+      "authoritative": true,
+      "final_empty": true,
+      "prevented": false,
+      "received_stale_commit": false,
+      "received_stale_notification": false,
+      "notification_history_count": 1,
+      "acknowledgment_at_quiescence": "notification_already_emitted",
+      "trace": [
+        {
+          "sequence": 0,
+          "event": "application_check_accepted"
+        },
+        {
+          "sequence": 1,
+          "event": "committed"
+        },
+        {
+          "sequence": 2,
+          "event": "notified"
+        },
+        {
+          "sequence": 3,
+          "event": "paused_after_notification"
+        },
+        {
+          "sequence": 4,
+          "event": "cancellation_received_and_compensated"
+        }
+      ]
+    }
+  ]
+}

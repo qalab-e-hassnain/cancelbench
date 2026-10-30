@@ -1,0 +1,39 @@
+{
+  "scope": "Extracted upstream functions with controlled dependencies; not full-agent or remote-database reproduction.",
+  "contract": "Retraction before tool entry is a local proposed contract, not an upstream promised guarantee.",
+  "wrapper_limit": "Local wrapper only; does not protect a correction arriving after its check or a remote dispatch boundary.",
+  "provenance": {
+    "speculative_action": {
+      "commit": "dc938b9ef7474caf07fe4ad16549c1fa8c7d268c",
+      "path": "e-commerce/tau-bench/tau_bench/envs/retail/tools/cancel_pending_order.py",
+      "sha256": "c33151a896b62ac87ed1bcbcbd62dabcd47c8c1eaf47bbb5e2f15f8b6283b19d"
+    },
+    "riley": {
+      "commit": "f54b220e21cd55d812e7a4386ea865d4791b6b98",
+      "path": "openai-realtime-mini/app/tools.py",
+      "sha256": "142cd55f45f3f3223a79cc3a204999927f6b8ea2604eaed83176539c3c9dc0f0"
+    }
+  },
+  "results": [
+    {
+      "implementation": "speculative_action",
+      "local_wrapper": false,
+      "effect_after_retraction": true
+    },
+    {
+      "implementation": "riley",
+      "local_wrapper": false,
+      "effect_after_retraction": true
+    },
+    {
+      "implementation": "speculative_action",
+      "local_wrapper": true,
+      "effect_after_retraction": false
+    },
+    {
+      "implementation": "riley",
+      "local_wrapper": true,
+      "effect_after_retraction": false
+    }
+  ]
+}

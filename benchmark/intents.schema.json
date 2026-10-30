@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CancelBench annotated intent record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "synthetic", "split", "speaker_id", "template_family", "audio_path", "license", "consent", "annotations"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "synthetic": {"type": "boolean"},
+    "split": {"enum": ["illustration", "development", "held_out"]},
+    "speaker_id": {"type": ["string", "null"]},
+    "template_family": {"type": "string"},
+    "audio_path": {"type": ["string", "null"]},
+    "license": {"type": ["string", "null"]},
+    "consent": {"enum": ["not_applicable_synthetic", "recording_only", "redistribution_allowed"]},
+    "annotations": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["annotator", "events"],
+        "properties": {
+          "annotator": {"type": "string"},
+          "events": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["kind", "target", "onset_ms", "disambiguated_ms"],
+              "properties": {
+                "kind": {"enum": ["set", "cancel", "noop", "ambiguous"]},
+                "target": {"type": ["string", "null"]},
+                "onset_ms": {"type": "integer", "minimum": 0},
+                "disambiguated_ms": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

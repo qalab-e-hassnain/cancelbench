@@ -1,0 +1,15 @@
+{
+  "full-duplex-bench:v1_5/user_interruption/example-001": {
+    "event_class": "cancel_after_commit_before_notify",
+    "change_ms": 1840,
+    "turn_end_ms": 2200,
+    "prepare_initial_ms": 900,
+    "notification_ms": 200,
+    "compensation_ms": 250,
+    "annotation_source": "manual_audio_review"
+  },
+  "full-duplex-bench:v1_5/user_backchannel/example-002": {
+    "event_class": "non_cancellation_overlap",
+    "annotation_source": "manual_audio_review"
+  }
+}

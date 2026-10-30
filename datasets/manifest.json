@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "source_audio_in_repo": false,
+    "private_quickcomm_data_in_repo": false,
+    "require_license_review_before_use": true
+  },
+  "datasets": [
+    {
+      "id": "spokenwoz",
+      "name": "SpokenWOZ",
+      "official_url": "https://spokenwoz.github.io/",
+      "license": "CC BY-NC 4.0",
+      "role": "spoken_task_oriented_dialogue",
+      "required_for_minimum_public_validation": true,
+      "evaluation_boundary": "human-human spoken dialogue; not a native cancellation benchmark",
+      "local_path": null,
+      "version": null,
+      "split": "test"
+    },
+    {
+      "id": "full_duplex_bench",
+      "name": "Full-Duplex-Bench",
+      "official_url": "https://full-duplex-bench.github.io/",
+      "license": "see official release terms",
+      "role": "interruption_and_pause_stress",
+      "required_for_minimum_public_validation": true,
+      "evaluation_boundary": "turn-taking benchmark; cancellation semantics are added by CancelBench",
+      "local_path": null,
+      "version": null,
+      "split": "v1.5"
+    },
+    {
+      "id": "ami",
+      "name": "AMI Meeting Corpus",
+      "official_url": "https://groups.inf.ed.ac.uk/ami/corpus/",
+      "license": "see official corpus terms",
+      "role": "overlap_and_background_speech_robustness",
+      "required_for_minimum_public_validation": false,
+      "evaluation_boundary": "meeting speech; not hotel/security task traffic",
+      "local_path": null,
+      "version": null,
+      "split": "official"
+    },
+    {
+      "id": "humdial_fdbench",
+      "name": "HumDial-FDBench",
+      "official_url": "https://github.com/ASLP-lab/HumDial-FDBench",
+      "license": "verify repository terms before use",
+      "role": "human_interruption_and_rejection",
+      "required_for_minimum_public_validation": false,
+      "evaluation_boundary": "focused interruption/rejection scenarios",
+      "local_path": null,
+      "version": null,
+      "split": "official"
+    }
+  ]
+}
