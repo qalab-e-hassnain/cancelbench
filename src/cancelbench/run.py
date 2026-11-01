@@ -10,6 +10,7 @@ from pathlib import Path
 import platform
 from statistics import mean, median
 
+from .monotonicity import analyse, effects
 from .simulator import POLICIES, scenarios, simulate
 
 
@@ -29,6 +30,7 @@ def summarize(rows):
         "stale_world_notification_rate": rate(rows, "stale_world_notification"),
         "cancel_prevented_rate": rate(cancel, "cancel_prevented"),
         "cancel_final_correct_rate": rate(cancel, "cancel_final_correct"),
+        "cancel_notice_prevented_rate": rate(cancel, "cancel_notice_prevented"),
         "mean_success_settlement_ms": mean(success_latency) if success_latency else None,
         "median_success_settlement_ms": median(success_latency) if success_latency else None,
         "stable_mean_settlement_ms": mean(r["settlement_latency_ms"] for r in stable) if stable else None,
@@ -56,7 +58,7 @@ def main():
     cases = list(scenarios())
     case_bytes = ("\n".join(json.dumps(s.__dict__, sort_keys=True) for s in cases) + "\n").encode()
     (out / "scenarios.jsonl").write_bytes(case_bytes)
-    rows = []
+    rows, eff = [], {}
     # Explicit mtime and blank original filename make gzip bytes reproducible.
     with (out / "traces.jsonl.gz").open("wb") as raw:
         with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed:
@@ -65,6 +67,7 @@ def main():
                     for policy in POLICIES:
                         row, trace = simulate(s, policy)
                         rows.append(row)
+                        eff[s.id, policy.name] = effects(trace)
                         trace_file.write(json.dumps({"scenario_id": s.id, "policy": policy.name,
                                                      "events": trace}, sort_keys=True) + "\n")
     with (out / "runs.csv").open("w", newline="", encoding="utf-8") as f:
@@ -88,6 +91,8 @@ def main():
                           and r["change_ms"] == t and r["kind"] in {"revise", "cancel", "chain"}]
                 sensitivity.append({"policy": p.name, "delivery_ms": delay, "change_ms": t, **summarize(subset)})
     (out / "sensitivity.json").write_text(json.dumps(sensitivity, indent=2) + "\n")
+    by_key = {(r["id"], r["policy"]): r for r in rows}
+    (out / "monotonicity.json").write_text(json.dumps(analyse(cases, POLICIES, eff, by_key), indent=2) + "\n")
     manifest = {
         "experiment": "cancelbench-fixed-grid-v1", "time_unit": "virtual milliseconds",
         "python": platform.python_version(), "scenario_count": len(cases), "run_count": len(rows),

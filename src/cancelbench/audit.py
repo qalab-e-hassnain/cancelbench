@@ -50,6 +50,7 @@ def main():
                 "superseded_notification": changed and any(e["version"] != final["version"] for e in notices),
                 "cancel_prevented": r["kind"] == "cancel" and not commits,
                 "cancel_final_correct": r["kind"] == "cancel" and correct,
+                "cancel_notice_prevented": r["kind"] == "cancel" and not notices,
             }
             for name, value in expected.items():
                 if r[name] != str(bool(value)):

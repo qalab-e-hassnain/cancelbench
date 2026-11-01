@@ -1,0 +1,5 @@
+Correct final state does not show that a spoken cancellation prevented an effect
+Under version fencing, releasing effects later never adds a committed version
+Holding effects until the agent's own endpoint decision adds no perceived latency
+Holding only irreversible effects weakly dominates eager execution
+All results are checked on 12,348 released, independently rescored traces

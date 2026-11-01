@@ -1,4 +1,6 @@
-# PJCIS submission guide
+# PJCIS submission guide (superseded)
+
+Superseded: the paper now targets Computer Speech & Language. See [JOURNAL_SUBMISSION_GUIDE.md](JOURNAL_SUBMISSION_GUIDE.md). The `paper/manuscript_pjcis.*` files are no longer built and can be deleted.
 
 This guide is for submitting the finalized manuscript to the Pakistan Journal
 of Computer and Information Systems (PJCIS), published by PASTIC.
@@ -96,7 +98,7 @@ contact listed on the same official page:
 Use a clear subject line:
 
 ```text
-Manuscript submission: Wait, Cancel That — Commit Timing and Cancellation Semantics
+Manuscript submission: Wait, Cancel That: Release Monotonicity and Cancellation Semantics
 ```
 
 Suggested email:
@@ -107,17 +109,18 @@ Dear PJCIS Editorial Office,
 Please consider the attached manuscript for publication in the Pakistan Journal
 of Computer and Information Systems.
 
-Title: “Wait, Cancel That”: Commit Timing and Cancellation Semantics in an
-Oracle-Intent Model of Voice-Agent Actions
+Title: “Wait, Cancel That”: Release Monotonicity and Cancellation Semantics
+for Streaming Voice-Agent Actions
 Author: Qalab Hassnain Agha
 ORCID: 0009-0006-6242-2761
 Affiliation: Independent Researcher, Islamabad, Pakistan
 
-The manuscript presents a reproducible discrete-event reference model for
-distinguishing cancellation prevention, compensation, notification history,
-and final-state recovery in asynchronous voice-agent actions. The study uses
-oracle intent events and clearly reports its limitations; it does not claim
-production voice-agent or human-subject performance.
+The manuscript proves that, under atomic version fencing, releasing a voice
+agent's effects later never adds a committed or notified version, and that
+holding irreversible effects until the system's own end-of-turn decision costs
+no acknowledgement latency. The results are verified exhaustively in a
+reproducible discrete-event model with oracle intent events; the study does not
+claim production voice-agent or human-subject performance.
 
 The manuscript is original, is not under review elsewhere, and contains no
 private QuickComm recordings, transcripts, credentials, or restricted source

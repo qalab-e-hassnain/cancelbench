@@ -1,6 +1,6 @@
 # Public release checklist
 
-- Author: Qalab Hassnain Agha, Independent Researcher
+- Author: Qalab Hassnain Agha, Quickgen Technologies (SMC-Private) Limited, qalab@quickgentech.com
 - ORCID: https://orcid.org/0009-0006-6242-2761
 - No co-authors are listed in the manuscript or package.
 - AI assistance is disclosed accurately in the manuscript.
