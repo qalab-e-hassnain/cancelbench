@@ -1,0 +1,194 @@
+{
+  "ordered_pairs": [
+    {
+      "earlier": "eager",
+      "later": "guarded_0",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 398,
+      "more_superseded": 0,
+      "world_stale_worse": 48,
+      "prevention_worse": 0
+    },
+    {
+      "earlier": "guarded_0",
+      "later": "guarded_200",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 152,
+      "more_superseded": 0,
+      "world_stale_worse": 48,
+      "prevention_worse": 0
+    },
+    {
+      "earlier": "guarded_200",
+      "later": "guarded_500",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 228,
+      "more_superseded": 0,
+      "world_stale_worse": 72,
+      "prevention_worse": 0
+    },
+    {
+      "earlier": "guarded_0",
+      "later": "wait",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 328,
+      "more_superseded": 0,
+      "world_stale_worse": 72,
+      "prevention_worse": 0
+    },
+    {
+      "earlier": "eager",
+      "later": "release_gate",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 398,
+      "more_superseded": 0,
+      "world_stale_worse": 0,
+      "prevention_worse": 0
+    }
+  ],
+  "unordered_pairs": [
+    {
+      "first": "guarded_500",
+      "second": "wait",
+      "scenarios": 1764,
+      "notice_violation": 146,
+      "commit_violation": 180,
+      "fewer_superseded": 98,
+      "more_superseded": 146
+    }
+  ],
+  "endpoint_sweep": [
+    {
+      "earlier": "eager",
+      "later": "gate@600",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 162,
+      "more_superseded": 0
+    },
+    {
+      "earlier": "gate@600",
+      "later": "gate@800",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 102,
+      "more_superseded": 0
+    },
+    {
+      "earlier": "gate@800",
+      "later": "gate@1000",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 146,
+      "more_superseded": 0
+    },
+    {
+      "earlier": "gate@1000",
+      "later": "gate@1200",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 152,
+      "more_superseded": 0
+    },
+    {
+      "earlier": "gate@1200",
+      "later": "gate@1400",
+      "scenarios": 1764,
+      "notice_violation": 0,
+      "commit_violation": 0,
+      "fewer_superseded": 144,
+      "more_superseded": 0
+    }
+  ],
+  "release_gate_equals_guarded_0_notices": 1764,
+  "closed_form": {
+    "checked": 5184,
+    "matched": 5184
+  },
+  "strata": {
+    "wait": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.031746031746031744
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.4470899470899471
+      }
+    },
+    "eager": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.4973544973544973
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.8941798941798942
+      }
+    },
+    "guarded_0": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.05555555555555555
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.8201058201058201
+      }
+    },
+    "guarded_200": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.007936507936507936
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.6825396825396826
+      }
+    },
+    "guarded_500": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.0
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.4126984126984127
+      }
+    },
+    "release_gate": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.05555555555555555
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 0.8201058201058201
+      }
+    },
+    "guarded_no_fence": {
+      "within_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 1.0
+      },
+      "after_turn": {
+        "runs": 756,
+        "superseded_notification_rate": 1.0
+      }
+    }
+  }
+}

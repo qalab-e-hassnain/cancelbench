@@ -7,13 +7,13 @@ A reproducible simulation study of commit timing, cancellation and compensation 
 ## Read the paper
 
 - [Complete manuscript](paper/manuscript.md)
-- [PJCIS submission guide](PJCIS_SUBMISSION_GUIDE.md)
+- [Journal submission PDF (Elsevier format)](paper/manuscript_csl.pdf) and [journal submission guide](JOURNAL_SUBMISSION_GUIDE.md)
 - [Standalone HTML manuscript](paper/manuscript.html), suitable for browser reading or printing
 - [LaTeX source](paper/manuscript.tex)
 - [Editable manuscript template](paper/manuscript.template.md)
 - [Measured results](results/summary.md)
 
-The manuscript contains the abstract, related work, operational definitions, elementary proofs, experimental design, measured tables, discussion, limitations, references and reproduction instructions. Author approval and independent scientific review are still required. A PDF has not been compiled in the initial environment because a TeX engine is not installed.
+The manuscript contains the abstract, related work, operational definitions, elementary proofs, experimental design, measured tables, discussion, limitations, references and reproduction instructions. Author approval and independent scientific review are still required. Compiled PDFs: [paper/manuscript.pdf](paper/manuscript.pdf) and the Elsevier-format [paper/manuscript_csl.pdf](paper/manuscript_csl.pdf).
 
 ## Quick start
 
@@ -43,13 +43,14 @@ This optional installation may fetch build tooling; the direct commands above re
 
 ## What was executed
 
-- 1,764 deterministic scenarios across six policy configurations: 10,584 runs.
+- 1,764 deterministic scenarios across seven policy configurations (including a release gate that holds only the notification): 12,348 runs.
 - Five input patterns: stable, interruption, revision, cancellation and two revisions.
 - Sweeps over preparation, intent delivery, notification and compensation delays.
-- Twenty-eight unit/invariant tests, including exhaustive checks over the scenario grid and safe open-data metadata handling.
+- Thirty unit/invariant tests, including exhaustive checks over the scenario grid, full-grid release monotonicity and safe open-data metadata handling.
+- Paired per-scenario checks of the release-monotonicity theorem, an endpoint sweep and a closed-form check ([results/monotonicity.json](results/monotonicity.json)).
 - Independent rescoring of saved traces and source/artifact hash verification.
 
-All five fenced configurations reach the intended final database state under the model's reliable-delivery and successful-compensation assumptions. That agreement hides differences in earlier effect histories. See [the measured tables](results/summary.md) and manuscript for denominators and interpretation.
+All six fenced configurations reach the intended final database state under the model's reliable-delivery and successful-compensation assumptions. That agreement hides differences in earlier effect histories. See [the measured tables](results/summary.md) and manuscript for denominators and interpretation.
 
 ## Important metric distinctions
 

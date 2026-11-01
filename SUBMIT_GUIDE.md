@@ -1,4 +1,6 @@
-# Submission guide
+# Submission guide (conference fallback)
+
+The primary target is now a journal; see [JOURNAL_SUBMISSION_GUIDE.md](JOURNAL_SUBMISSION_GUIDE.md). This guide covers the conference route as a fallback.
 
 This repository contains the manuscript source, HTML version, LaTeX source, results, tests, and reproducibility artifacts. The repository does not currently contain a PDF because this environment has no TeX or HTML-to-PDF engine. Do not submit the Markdown or HTML file as the final conference manuscript.
 
@@ -79,7 +81,7 @@ Monitor https://cui.acm.org/2027/ for the call and submission system. This is th
 2. Create the author account using `support@qalabagha.com`.
 3. Enter Qalab Hassnain Agha as the sole author.
 4. Add ORCID `0009-0006-6242-2761`.
-5. Use `Independent Researcher` and `Islamabad, Pakistan` as affiliation.
+5. Use `Quickgen Technologies (SMC-Private) Limited, Islamabad, Pakistan` as affiliation and `qalab@quickgentech.com` as contact email.
 6. Upload the venue-formatted PDF and any required supplementary artifact link.
 7. Disclose AI assistance according to the venue's current policy.
 8. Confirm whether registration is required after acceptance; submission being free does not mean conference attendance is free.

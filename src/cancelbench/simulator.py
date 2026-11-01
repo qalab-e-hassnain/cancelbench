@@ -3,6 +3,8 @@
 The world knows an intent at source time; the runtime learns it after transport
 delay. This distinction exposes the limit of fencing against unseen revisions.
 Equal-time order: source intent, delivery, compensation, commit, notification.
+The release gate commits the database when ready but holds the irreversible
+notification until the end-of-turn gate.
 """
 
 from dataclasses import asdict, dataclass
@@ -37,7 +39,7 @@ class Policy:
     fence: bool = True
 
     def __post_init__(self):
-        if self.mode not in {"wait", "eager", "guarded", "debounce"} or self.grace_ms < 0:
+        if self.mode not in {"wait", "eager", "guarded", "release", "debounce"} or self.grace_ms < 0:
             raise ValueError("Invalid policy")
 
 
@@ -47,6 +49,7 @@ POLICIES = (
     Policy("guarded_0", "guarded"),
     Policy("guarded_200", "guarded", 200),
     Policy("guarded_500", "guarded", 500),
+    Policy("release_gate", "release"),
     Policy("guarded_no_fence", "guarded", fence=False),
 )
 
@@ -130,7 +133,8 @@ def simulate(s: Scenario, p: Policy):
             commits.append({"time_ms": t, "version": v, "target": target,
                             "stale_known": stale_known, "stale_world": stale_world})
             log(t, "committed", **commits[-1])
-            push(t + s.notification_ms, 4, "notify", x)
+            release_at = max(t, s.turn_end_ms + p.grace_ms) if p.mode == "release" else t
+            push(release_at + s.notification_ms, 4, "notify", x)
         elif event == "notify":
             if p.fence and v != state["received_version"]:
                 blocked_notices += 1
@@ -168,6 +172,7 @@ def simulate(s: Scenario, p: Policy):
         "settlement_latency_ms": latency,
         "cancel_prevented": s.kind == "cancel" and not commits,
         "cancel_final_correct": s.kind == "cancel" and final_correct,
+        "cancel_notice_prevented": s.kind == "cancel" and not notices,
     }
     return row, trace
 

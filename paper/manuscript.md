@@ -1,128 +1,140 @@
-# “Wait, Cancel That”: Commit Timing and Cancellation Semantics in an Oracle-Intent Model of Voice-Agent Actions
+# “Wait, Cancel That”: Release Monotonicity and Cancellation Semantics for Streaming Voice-Agent Actions
 
 Qalab Hassnain Agha
 
-ORCID: https://orcid.org/0009-0006-6242-2761
+Co-Founder and Chief Technology Officer, Quickgen Technologies (SMC-Private) Limited, National Science and Technology Park, NUST H-12 Campus, Islamabad, Pakistan
 
-Independent Researcher, Islamabad, Pakistan · qagha.hassnain39@ce.ceme.edu.pk · https://qalabagha.com · https://github.com/qalab-e-hassnain · https://linkedin.com/in/qalabhassnainagha
+qalab@quickgentech.com · ORCID: https://orcid.org/0009-0006-6242-2761 · https://qalabagha.com
 
-Final author-reviewed version dated 30 October 2026.
+Author-reviewed version dated 1 November 2026.
+
+## Highlights
+
+- Correct final state does not show that a spoken cancellation prevented an effect
+- Under version fencing, releasing effects later never adds a committed version
+- Holding effects until the agent's own endpoint decision adds no perceived latency
+- Holding only irreversible effects weakly dominates eager execution
+- All results are checked on 12,348 released, independently rescored traces
 
 ## Abstract
 
-Voice agents can begin tool execution before a user finishes speaking, but users can revise or cancel instructions while execution is in progress. A correct final database state does not establish that a cancellation prevented an earlier effect. We study this distinction using a deterministic, single-resource discrete-event model with oracle-parsed intent events. The model separates source intent from runtime receipt, reversible database writes from irreversible notification history, and prevention from compensation. We evaluate six execution-policy configurations over 1764 synthetic scenarios, producing 10584 runs. All five version-fenced configurations converge to the specified final database state under reliable delivery and successful compensation, yet their notification histories differ substantially. Among revision and cancellation scenarios, eager execution emits a subsequently superseded notification in 69.58% of cases, compared with 43.78% for preparation during the turn followed by a commit gate at its nominal end. On stable scenarios, that gated policy and eager execution both have 66.7 ms mean residual database-settlement latency, compared with 600.0 ms for preparation beginning at turn end. Removing version fencing reduces final-state correctness to 79.37%. These are finite-grid simulator results, not measurements of speech recognition, language models, human behaviour or production voice agents. The contribution is an auditable reference model and diagnostic decomposition of cancellation outcomes, with explicit assumptions and a path to end-to-end validation.
+Voice agents can begin tool work before a user finishes speaking, and users often revise mid-utterance: “room 305 ... actually, 503.” A correct final database does not show that the revision prevented the earlier effect, because a sent notification cannot be recalled. This is the output-commit problem of rollback recovery, met again at the turn boundary. We formalize it in a deterministic model with oracle-parsed intents that separates source intent from receipt, reversible writes from irreversible notifications, and prevention from compensation. We prove a release-monotonicity theorem: when the user cannot observe effects before the endpoint, version fencing guarantees that releasing a commit or notification later never adds a committed or notified version, in every run, for any gate time and under any latency distribution. Holding effects until the system's own endpoint decision therefore adds no acknowledgement latency and is optimal among causal policies that add none. Only irreversible effects need holding: a release gate that commits eagerly but holds notifications until the endpoint weakly dominates eager execution on every measured outcome, delaying third-party notifications by at most the gap between tool readiness and the endpoint. It helps exactly when a correction arrives in that gap. An exhaustive paired check over 1,764 scenarios, seven policies and endpoint decisions from 600 to 1,400 ms finds zero violations. The results concern execution semantics under oracle intent, not speech recognition or production systems.
 
-**Keywords:** voice agents; cancellation; speculative execution; asynchronous tools; version fencing; compensation; discrete-event simulation.
+**Keywords:** voice agents; cancellation; output commit; speculative execution; version fencing; compensation; turn-taking.
 
 ## 1. Introduction
 
-Consider a user who says, “Send housekeeping to room 305 ... actually, 503.” An agent that begins execution after recognizing the first room number can overlap tool preparation with the rest of the utterance. That overlap can reduce waiting, but it can also produce an obsolete dispatch. If the agent subsequently edits its database to show room 503, the final state may be correct even though somebody already received a room-305 notification. The user-visible statement “cancelled” collapses several operationally different outcomes.
+Consider a user who says, “Send housekeeping to room 305 ... actually, 503.” An agent that starts work after the first room number saves time but may dispatch to the wrong room. If it then corrects its database, the final state is right although a member of staff has already received a room-305 notification. “Cancelled” collapses different outcomes: the effect was prevented, the database was compensated, or an irreversible message was already sent.
 
-The problem is relevant to systems that connect natural language with asynchronous work. Speech interruption concerns conversational output; task cancellation concerns scheduled or running work; compensation concerns an effect that has already happened. Their interfaces can coincide without their meanings coinciding. A runtime must track which instruction authorized a task, which effects have crossed a commit boundary, and which corrections it has actually received.
+Rollback recovery delays output to the outside world until it is known to be safe [11, 12], and external synchrony showed this can be free for the user [13]. Voice agents face the same problem, except that what is not yet final is the user's intent rather than data. Early execution is real: some agents execute tools while listening [5] or call them speculatively [9], and in two public implementations we probed, tool dispatch carries no intent version at all (Section 6.8). We ask when a voice agent may release an irreversible effect, and at what cost.
 
-We isolate those execution semantics from recognition quality. The model receives a perfect sequence of structured intent events. It does not listen to audio, call a language model, infer a speaker's authority or predict turn endings. Consequently, the experiment cannot estimate the reliability of any voice model. Instead, it asks a systems question: given the same recognized intents and tool durations, how does commit timing change observable cancellation outcomes?
+We isolate execution semantics from recognition: the model receives a perfect stream of structured intent events and processes no audio. RQ1 asks whether final database correctness distinguishes prevention from recovery. RQ2 asks when delaying release reduces superseded effects, and at what latency cost. RQ3 asks what version fencing guarantees when corrections are delivered with delay.
 
-Three research questions guide the study. RQ1 asks whether final database correctness distinguishes prevention from recovery. RQ2 asks how preparation overlap and a fixed commit gate change latency and superseded-effect history. RQ3 asks what version fencing guarantees when corrections are delivered with delay.
-
-The contributions are deliberately limited: (1) a traceable operational model with separate source and received intent versions; (2) metrics that distinguish known-stale execution, execution stale relative to an undelivered intent, retrospective supersession and final-state recovery; and (3) an exhaustive run over a declared finite parameter grid, accompanied by raw traces, a separate scorer and invariant tests. Neither transactions nor compensation are claimed as new mechanisms. We make no claim to be the first study of cancellation in voice agents.
+The contributions are: (1) an operational model separating source from received intent, reversible from irreversible effects, and prevention from compensation; (2) a release-monotonicity theorem with its consequences and its boundary: the exact condition under which delay helps, zero cost and causal optimality of an endpoint gate, weak dominance of a gate that holds only the irreversible effect, non-monotone stale database writes, and unfenceable corrections in transit; and (3) an exhaustive, auditable consistency check of the proofs. Fencing, compensation and buffered output are not new, and the theorem is short; its value lies in locating the zero-cost release point for spoken intent and stating precisely what it protects.
 
 ## 2. Related Work
 
-### 2.1 Voice-agent execution and evaluation
+### 2.1 Voice agents, turn-taking and self-repair
 
-Full-Duplex-Bench-v3 evaluates spoken systems using human audio with disfluencies and multi-step tool use [1]. Its scope includes recognition and interaction phenomena absent from our model. It is relevant to future validation of corrections, but our synthetic event traces cannot replace its audio evaluation.
+Full-Duplex-Bench-v3 evaluates spoken systems on human audio with disfluencies and multi-step tool use [1]. Qwen-Audio-Agent runs background execution beside foreground conversation and separates speech interruption from task cancellation [2]; DuplexAgent-RSI handles cancellation, replacement and result delivery in a modular harness [3]. VAmoS Bench scores action traces and backend changes rather than spoken assertions [4]; our metrics add that a backend ending correct may still have emitted an irreversible superseded effect.
 
-Qwen-Audio-Agent describes foreground conversation with asynchronous background execution and explicitly separates speech interruption from task cancellation [2]. DuplexAgent-RSI also addresses cancellation, replacement and result delivery within a modular interaction harness [3]. These works make a broad novelty claim about “cancellation-aware voice agents” inappropriate. Our narrower focus is the distinction between state convergence and effect history in a small, inspectable scheduler model. We have not reimplemented or experimentally compared their systems.
+Spoken dialogue systems decide when the user's turn has ended from the audio received so far, under uncertainty [14]. Self-repairs typically follow the trouble source closely, within the same turn [15, 16]. These facts motivate separating corrections during the turn from changes of mind after it, and gating on the system's own endpoint decision.
 
-VAmoS Bench evaluates complete voice agents against stateful customer-support scenarios, scoring action traces and backend changes [4]. It supplies a relevant precedent for checking what tools did rather than accepting an agent's spoken assertion. Our experiment adopts that evaluation principle in a substantially simpler environment without audio, SQL or model inference.
+### 2.2 Speculation, output commit and recovery
 
-### 2.2 Speculative execution and recovery
+Incremental dialogue processing formalizes revocation and commitment of processing units [8]. Heartbeat Thinking executes tools while listening [5]; Speculative Actions predicts and validates future actions [6]; our model performs no prediction. Speculative Interaction Agents run early work and hold tools they classify as sensitive for explicit confirmation [9]. That is the closest precedent to our gate. We show which effects need holding (the irreversible ones), until when (the system's own endpoint decision, without asking the user), and that the hold costs no acknowledgement latency.
 
-Incremental dialogue processing already formalizes revocation and commitment of processing units [8]. These concepts predate modern voice-agent orchestration. Speculative Interaction Agents also separates early tool work from sensitive execution, supports modifying or removing in-flight calls, and holds sensitive tools for final confirmation [9]. These are close precedents for our preparation/commit distinction. Our study therefore does not claim a new general cancellation or speculative-execution mechanism. The narrower candidate contribution is an executable diagnostic comparison of temporal freshness, recovery and persistent effect history; its publication-level novelty is not established by this targeted review.
-
-Heartbeat Thinking investigates reasoning and tool execution while listening, allowing ongoing invocations to finish as updated input arrives [5]. Speculative Actions studies prediction and validation of future agent actions to overlap execution [6]. Those approaches motivate examination of early work and eventual commitment. Our model performs no speculative prediction: its initial target is supplied by an oracle and may subsequently be revised.
-
-Compensating committed operations is established in transaction-processing literature, including Sagas [7]. A compensating operation provides application-level recovery rather than erasure of history. Our version-tagged compare-and-clear compensation is a small reference mechanism, not a replacement for distributed transaction protocols. We use it to expose the difference between removing a database assignment and retracting a notification that has already been observed.
-
-The literature review is targeted rather than systematic. The cited official records and selected full-text sections were checked while preparing the manuscript. We also inspected two pinned public implementations with narrow extracted-function probes; those probes are contract evidence, not complete-agent evaluations. No submission-level novelty claim is made.
+We transfer the output-commit principle [11, 12, 13] from data durability to intent finality and identify the endpoint decision as the point at which the delay is free. Three features have no counterpart in durability: intent can be revised, not only made stable; a correction can be in transit when an effect is released (Proposition 3); and stale database writes are not monotone in delay. Our version check is a fencing token [17], a form of optimistic validation [18]; compensation follows Sagas [7].
 
 ## 3. Operational Model
 
 ### 3.1 Scope and intent stream
 
-Each scenario contains one mutable database resource: a room assignment. The assignment begins empty. An initial instruction targets room 305. A revision targets room 503; a second revision, when present, targets room 701. An explicit cancellation specifies an empty assignment. A non-cancelling interruption leaves the current instruction unchanged.
+Each scenario has one mutable resource: a room assignment, initially empty. The initial instruction targets room 305, a revision targets 503, a second revision targets 701, and a cancellation specifies an empty assignment. A non-cancelling interruption leaves the instruction unchanged and does not advance the version.
 
-Every substantive intent has a monotonically increasing integer version. A source event changes the world's intended target at virtual time s. The runtime receives that same event at time r = s + d, where d is a fixed nonnegative delivery delay for subsequent events in the scenario. The initial intent is delivered at time zero. A non-cancelling interruption does not advance the version. The oracle supplies event type, target and version correctly.
-
-We distinguish the latest source version W(t) from the latest received version R(t). A delayed correction creates an interval in which W(t) exceeds R(t). A runtime can fence against R(t), but cannot use a source event it has not yet received.
+Each substantive intent has an increasing integer version. A source event changes the intended target at virtual time s; the runtime receives it at r = s + d, with a fixed delivery delay d for events after the initial one, which is delivered at zero. W(t) is the latest source version and R(t) the highest version received by t. R is nondecreasing, which a runtime can guarantee under reordering by ignoring older versions. A delayed correction creates an interval in which W(t) exceeds R(t).
 
 ### 3.2 Preparation, commitment and notification
 
-Preparation takes a declared virtual duration P and has no external side effects. Completing preparation permits an instantaneous database commit. The commit replaces the resource with the operation's version and target. A notification is scheduled N milliseconds after that commit. Once recorded, the notification remains in the observable history permanently.
-
-Both the commit and notification optionally check that their operation version equals R(t). The check and state change form one atomic simulator event. This assumption is essential: a real implementation must enforce an equivalent check at the authoritative write or dispatch boundary. A check in application code followed by an unprotected remote write is not covered by this model.
-
-The reference environment represents only one assignment and one notification per successful commit. It is not a three-domain benchmark of hotel booking, staff dispatch and financial cancellation. Multiple business labels would not create distinct tasks unless they introduced distinct state transitions and constraints.
+Preparation takes a duration P and has no external side effects. The policy then chooses when to attempt the database commit and the notification: their release times. A notification is irreversible once accepted. With fencing, a commit or notification succeeds only if its version equals R at that instant, and the check and state change are one atomic event. A real system must enforce this at the authoritative boundary, for example with a version predicate in the write and a transactional outbox whose dispatcher rechecks the version; an application-level check followed by an unprotected write is not covered.
 
 ### 3.3 Compensation
 
-When a substantive update is received while the database is nonempty, the runtime schedules compensation after C milliseconds. Compensation captures the database version present at receipt. It clears the assignment only if that captured version still occupies the database when compensation executes. This compare-and-clear rule prevents a delayed recovery operation from deleting a newer assignment.
+When a substantive update is received while the database is nonempty, compensation is scheduled after C milliseconds. It captures the version present at receipt and clears the assignment only if that version is still present, so a delayed recovery cannot delete a newer assignment. Compensation never installs a version or touches the notification history, and it always succeeds here. A revision also schedules preparation of its replacement; a cancellation schedules none.
 
-A revision also schedules preparation for the replacement assignment. A cancellation schedules no replacement. Notifications that were already emitted remain in history. Pending notifications can be suppressed by the version fence. Compensation is reliable in this experiment; its failure, retry and crash semantics are outside scope.
+### 3.4 Event ordering
 
-### 3.4 Event ordering and quiescence
+Time is integer virtual milliseconds. At equal timestamps, events execute in the order source updates, receipts, compensation, commits, notifications, so a correction received exactly at a release blocks it. The queue is drained completely; there are no timeouts, losses, duplicates or random scheduling, and overlap is unlimited.
 
-All time is integer virtual milliseconds. At the same timestamp, events execute in this order: source updates, runtime receipts, compensation, database commits, notifications. Within each category, insertion order breaks ties. Thus a correction received exactly at a scheduled commit blocks that commit when fencing is enabled. Another ordering can change equality-boundary outcomes and should be reported explicitly in replications.
+## 4. Policies and Release-Timing Results
 
-The queue is drained completely. There are no timeouts, dropped messages, duplicate deliveries, network failures, rate limits or random scheduling. Computational overlap is unlimited. This is a deterministic scheduling abstraction, not a performance measurement of concurrent infrastructure.
+### 4.1 Policies
 
-## 4. Policies and Elementary Properties
-
-### 4.1 Policy definitions
-
-Let E = 1000 ms be a fixed nominal boundary for the original turn. For a recognized operation received at r with preparation duration P, the baseline policies choose these commit times:
+For an operation received at r with preparation duration P, the policies release effects at these times, where E is the end-of-turn gate:
 
 ```text
-Wait:       max(r, E) + P
-Eager:      r + P
-Guarded(g): max(r + P, E + g)
+Policy         commit attempt         notification attempt
+Wait           max(r, E) + P          commit + N
+Eager          r + P                  commit + N
+Guarded(g)     max(r + P, E + g)      commit + N
+Release gate   r + P                  max(r + P, E) + N
 ```
 
-Wait begins preparation no earlier than E. Eager prepares and commits immediately when ready. Guarded prepares early but delays commitment to a fixed gate E + g. We evaluate g in {0, 200, 500} ms. All five main configurations apply the same version checks and compensation rule.
+Guarded(g) prepares on receipt but holds the commit until E + g, with g in {0, 200, 500} ms. The release gate commits as soon as preparation completes but holds the irreversible notification until the gate. All six share fences and compensation; Guarded-no-fence removes both fences as a diagnostic ablation. The main grid fixes E at 1,000 ms, but every result holds for any gate time, including the system's own endpoint decision Ê, which is internal state rather than an oracle (Section 6.2).
 
-The sixth configuration, Guarded-no-fence, uses g = 0 but removes both commit and notification version checks. It retains version-aware compensation. It is a diagnostic ablation, not a competitive state-of-the-art baseline. It isolates the effect of allowing scheduled obsolete work to complete.
+### 4.2 Freshness and convergence
 
-The gate is fixed to the original turn, not a silence detector or a rolling debounce window. Later corrections do not move it. Corrections after E represent subsequent intent changes within the modeled interaction. Their inclusion is intentional, but it means that a longer grace period does not make the policy safe against arbitrarily late revisions.
+**Proposition 1.** With fencing and atomic check-and-write, no commit or notification is stale relative to the latest received substantive intent at that instant.
 
-### 4.2 Received-version freshness
+**Proof.** A fenced event succeeds only if its version equals R at the atomic event, so an event whose version differs from R is rejected. Source updates not yet received do not change R, so the proposition says nothing about freshness relative to W.
 
-**Proposition 1.** With fencing enabled and atomic check-and-write, no database commit is stale relative to the latest received substantive intent at that instant.
+**Proposition 2.** Under a finite intent stream, reliable delivery, finite preparation, successful compensation and fencing, the database eventually equals the final target.
 
-**Proof.** Each substantive receipt replaces R with its newer version. A commit executes only if its version equals R at the atomic commit event. Therefore a commit whose version differs from R is rejected. Source updates that have not arrived do not change R, so the proposition says nothing about freshness relative to W. The same argument applies at the notification boundary. This is a direct property of the guard, not a learned capability. Its empirical verification checks implementation consistency with the definition.
+**Proof.** After the last receipt no older operation can commit. A final set operation commits once prepared, and pending compensation can clear only older captured versions. After a final cancellation, older commits are blocked and any assignment is cleared by its scheduled compensation. Convergence says nothing about effects already emitted.
 
-### 4.3 Eventual final-state recovery
+**Proposition 3.** Received-version fencing alone cannot guarantee freshness against corrections delivered after a release.
 
-**Proposition 2.** Under the finite input stream, reliable delivery, finite preparation durations, successful compensation and fenced execution modeled here, the database eventually equals the final target.
+**Proof.** Consider two executions with the same received history before release time c. In one, no correction exists; in the other, a correction occurs at s < c but arrives after c. A deterministic runtime has identical information at c in both and makes the same decision, so if it releases in the first it releases an effect stale relative to source intent in the second.
 
-**Proof.** After the last substantive receipt, no older operation can commit. If the final intent is a set operation, its finite preparation completes and the resulting commit is accepted. A previously scheduled compensation can clear only its captured older database version, not this final version. If the final intent is cancellation, no new operation is scheduled; any existing assignment is eventually cleared by its scheduled compensation, and older pending commits are blocked. Notifications do not alter the database. The proposition establishes convergence, not absence of prior external effects.
+### 4.3 Release monotonicity
 
-### 4.4 The visibility limit
+Throughout this section the intent stream is exogenous: it does not depend on the policy. This holds when the user cannot observe effects released before the endpoint, as in half-duplex agents.
 
-**Proposition 3.** Received-version fencing alone cannot guarantee freshness against corrections whose delivery occurs after commitment.
+**Lemma 1.** Let operation v be received at r_v. If its fence passes at time t2, it passes at every t1 with r_v <= t1 <= t2.
 
-**Argument.** Consider two executions with the same received history before commit time c. In one, no correction exists. In the other, a source correction occurs at s < c but arrives at r > c. A deterministic runtime has identical information at c in both executions and therefore makes the same decision. If it commits in the first, it also commits an operation stale relative to source intent in the second. A bounded grace period changes exposure but cannot rule out all such histories.
+**Proof.** R is nondecreasing and R(t) >= v for t >= r_v, so v <= R(t1) <= R(t2) = v. The argument holds for any fixed equal-time ordering, because R remains nondecreasing in event order.
 
-This is an information constraint, not an error that a stronger language model necessarily resolves. Explicit authorization handshakes, bounded-delay assumptions or delayed irreversible commitment would change the model and its guarantees.
+**Theorem 1 (release monotonicity).** Let two fenced policies A and B face the same intent stream. (i) If B attempts every commit no earlier than A attempts the same commit, then every version B commits is committed by A, and B prevents every cancellation that A prevents. (ii) If B attempts every notification no earlier than A attempts the same notification, then every version B notifies is notified by A. Under the respective condition, B therefore has no more superseded commits, or superseded notifications, than A.
 
-### 4.5 Stable-case latency
+**Proof.** Receipts are fixed by the intent stream, so R is the same function of time under both policies, and every received set operation is scheduled under both. For (ii), suppose B notifies v at time n_B, so the fence passes at n_B. A attempts the commit of v at some c_A >= r_v and its notification at n_A, with c_A <= n_A <= n_B. By Lemma 1 the fence passes at c_A and at n_A, so A commits and notifies v. Part (i) is the same argument applied to commit times. Compensation neither installs versions nor alters notifications, so it changes neither set. Superseded effects are the members of these sets other than the final version, and a cancellation is prevented exactly when the commit set is empty.
 
-For an unchanged instruction received at zero, residual settlement latency is measured after E. Wait has latency P; Guarded(g) has max(P - E, g); Eager has max(0, P - E). At g = 0, Guarded and Eager therefore have identical stable-case database latency in this abstraction. This equality depends on preparation having no side effects, no contention and no extra gate overhead.
+**Scope of Theorem 1.** The proof uses neither the single resource nor the fixed durations. It holds for any number of resources and dependent actions, provided each effect is fenced against the version of the instruction that authorized it and both policies attempt the same operations; revised partial hypotheses of a streaming recognizer are further version increments and are covered unchanged. Because the inclusion holds in every run, it holds almost surely under any distribution of preparation times and delivery delays that does not depend on the policy, so expected superseded counts are ordered too. Equal-time ordering affects only release times of measure zero in continuous time.
+
+**Non-atomic dispatch.** External channels rarely support a conditional send. Suppose a dispatcher checks the version at time k and the effect becomes irreversible at k + w. Lemma 1 concerns only when the fence is evaluated, and every check follows the operation's receipt, so Theorem 1 holds with check times in place of release times. A correction arriving in (k, k + w] is no longer stopped: the race window weakens every policy's protection by the same w but preserves their ordering.
+
+**Corollary 1 (exact gain).** With a single correction received at r, a fenced policy emits a superseded notification if and only if its initial notification attempt n0 satisfies n0 < r. Delaying that attempt from n0 to n0' therefore strictly helps exactly when n0 < r <= n0'. For Eager versus Guarded(0), this is P0 + N < r <= max(P0, E) + N: the correction must arrive after the tool is ready but before the gate. (Revision chains are covered by Theorem 1; this corollary is the single-correction case.)
+
+**Proof.** The revised operation is final, so only the initial version can be superseded. If r <= n0, the fence blocks the initial notification (or its commit, which precedes it). If n0 < r, the commit and notification both precede the receipt and pass.
+
+**Corollary 2 (only the irreversible effect needs the gate).** The release gate and Guarded(0) attempt every notification at the same time, so applying Theorem 1(ii) in both directions shows that they notify exactly the same versions in every scenario. The release gate commits the database earlier; its extra commits are reversible and recovered by compensation.
+
+**Proposition 4 (zero acknowledgement cost).** Suppose the agent acknowledges an instruction only after its authoritative commit and only after its own endpoint decision Ê, so the acknowledgement time is max(c_final, Ê). For any Ê, a gate at Ê (Guarded with E = Ê, or the release gate) has the same acknowledgement time and the same preparation work as Eager.
+
+**Proof.** Eager commits at r + P. Guarded commits at max(r + P, Ê), and max(max(r + P, Ê), Ê) = max(r + P, Ê). The release gate commits at r + P. All three prepare on receipt.
+
+The cost does not vanish; it moves to third parties. The release gate delivers a notification max(0, Ê - (r + P)) later than Eager, which matters only for latency-critical external actions, and those are excluded from the claim. With Ê = E, the acknowledgement time minus E is the stable residual latency of Section 6.4: P for Wait, max(P - E, g) for Guarded(g), and max(0, P - E) for Eager and the release gate. Commit times still differ (for P < E, Guarded(0) commits at E and Eager at P), but a user acknowledged after the endpoint cannot perceive it.
+
+**Theorem 2 (optimality of the endpoint gate).** Call a fenced policy causal if each decision at time t depends only on intents received by t. Call it zero-added-latency if it prepares on receipt and acknowledges, for every finite intent stream, at max(r_final + P_final, Ê): the earliest time at which any policy that prepares on receipt can acknowledge. Among causal zero-added-latency policies whose notification follows its commit by N, the gate at Ê notifies a subset of the versions notified by any other, in every scenario.
+
+**Proof.** Fix a scenario, an operation v with ready time u = r_v + P_v, and b = max(u, Ê). If a newer version is received by b, the gate never commits v. Otherwise, consider the stream that agrees with this one up to b and contains no later intents; there v is final, so a zero-added-latency policy must commit v no later than b. The endpoint decision Ê <= b is itself made from input received by then. A causal policy cannot distinguish the two streams before b, so it attempts v no later than b in the original scenario as well, and its notification no later than b + N, when the gate notifies. Lemma 1 then gives the inclusion as in Theorem 1.
+
+**What is not monotone.** Delay can add commits that are stale relative to source intent. A later commit can land inside an interval [s, s + d) in which a correction exists but has not yet been received, while an earlier commit would have preceded s. Theorem 1 still bounds the notifications of such commits; the stale database state itself is reversible and is recovered by compensation. This explains why, in Section 6.6, Wait shows more world-stale commits than Guarded(0) even though it never commits earlier. It also means that a commit gate does not dominate Eager on every outcome. The release gate does: its commits coincide with Eager's, so every commit-based outcome is identical, and by Theorem 1(ii) its notifications are a subset of Eager's.
 
 ## 5. Experimental Design
 
 ### 5.1 Fixed scenario grid
 
-The scenario generator enumerates the following declared values:
+**Table 1.** Factors of the scenario grid.
 
 | Factor | Values |
 | --- | --- |
@@ -133,33 +145,63 @@ The scenario generator enumerates the following declared values:
 | Delivery delay d | 0, 100, 350 ms for subsequent events |
 | Notification delay N | 0, 200 ms |
 | Compensation delay C | 0, 250 ms |
-| Nominal original-turn boundary E | 1000 ms |
+| End-of-turn gate E | 1000 ms (600 to 1400 ms in the endpoint sweep) |
 
-In a two-revision chain, the second change occurs 200 ms after the first and uses P0 for its preparation. Stable, interruption and cancellation cases use only one preparation-duration choice. Stable scenarios contain no change event. The resulting counts are 36 stable, 216 interruption, 648 revision, 216 cancellation and 648 chain scenarios, totaling 1764. Six policy configurations yield 10584 runs.
-
-Some factor combinations are behaviourally equivalent: for example, delivery delay does not affect a stable scenario. They remain in the grid to keep enumeration transparent. This affects weighting, so aggregate percentages are properties of this grid, not estimates of user behaviour. Kind-specific results accompany aggregate results. No held-out split is claimed because no model is trained and no policy parameter is fitted. The study was not preregistered.
+In a chain, the second change occurs 200 ms after the first and uses P0. The grid has 36 stable, 216 interruption, 648 revision, 216 cancellation and 648 chain scenarios (1,764); seven policies yield 12,348 runs. The grid checks the per-scenario theorems and illustrates magnitudes; its percentages depend on the chosen values and do not estimate user behaviour. We stratify by whether the first correction falls during the turn (150, 450, 850 ms) or after it. The enumeration is exhaustive, so confidence intervals would not be meaningful.
 
 ### 5.2 Outcome definitions
 
-**Final-state correctness** means that the database target at quiescence equals the last substantive source target, including an empty target for cancellation.
-
-**Known-stale commit incidence** records whether a run contains any commit whose version differs from R at commitment. **World-stale commit incidence** compares the version with W instead. The latter can occur even when a policy respects every intent it has received.
-
-**Superseded commit or notification incidence** is retrospective: among revision, cancellation and chain scenarios, it records whether any committed or notified version differs from the final substantive version. An effect can be legitimate when emitted and become superseded later. This metric must not be relabeled an unauthorized-action rate or an attack-success rate.
-
-**Cancellation prevention** means that no database commit occurred anywhere in a cancellation scenario. **Cancellation recovery** means that the final database is empty. Their distinction is intentional: editing back an assignment does not establish prevention.
-
-**Residual settlement latency** is the time until the database becomes continuously equal to the final target through quiescence, minus H = max(E, last substantive source time), clipped at zero. Incorrect final runs have no settlement latency and are excluded from successful-run means. The stable-case mean avoids that success-selection issue. Latency excludes audio generation, notification delivery and any acknowledgment to the user. It must not be interpreted as end-to-end conversational response latency.
+**Final-state correctness:** the database at quiescence equals the last source target. **Known-stale** and **world-stale commit incidence:** some commit's version differs from R, or from W, at commitment. **Superseded commit or notification incidence:** among revision, cancellation and chain scenarios, some committed or notified version differs from the final one; such an effect may have been legitimate when emitted. **Prevention:** no database commit (respectively, no notification) occurred in a cancellation scenario. **Recovery:** the final database is empty. **Residual settlement latency:** the time at which the database becomes continuously equal to the final target, minus max(E, last substantive source time), clipped at zero; it excludes audio generation and notification delivery.
 
 ### 5.3 Reproducibility and validation
 
-The Python implementation uses only the standard library. It emits a JSONL scenario set, CSV run outcomes, compressed JSONL event traces, aggregate and stratified results, and a manifest with source and artifact SHA-256 hashes. The manifest records the interpreter version. The simulator uses no random seed because it makes no random draws.
-
-Twenty-eight unit and invariant tests cover analytic stable latency, cancellation before and after commit, equal-time ordering, delayed delivery, stale writes without fencing, suppression of pending notifications, permanence of emitted notifications, interruption preservation, compensation races, dataset-manifest safety, metadata ingestion and the full-grid convergence property. A separate audit program recomputes the principal Boolean metrics and settlement latency from saved traces rather than trusting the CSV metrics.
+The standard-library Python implementation makes no random draws. It emits scenarios, per-run outcomes, event traces, aggregate, stratified and paired results, and a manifest of SHA-256 hashes. Thirty tests cover analytic latency, cancellation before and after commit, equal-time ordering, delayed delivery, unfenced stale writes, notification suppression and permanence, compensation races, the release gate, and full-grid convergence and monotonicity. A separate audit recomputes the metrics from saved traces. The simulator, tests and analysis scripts were developed with AI coding assistance, as declared at the end of the paper.
 
 ## 6. Results
 
-### 6.1 Aggregate outcomes
+### 6.1 Paired verification of release monotonicity
+
+For each ordered pair of policies in Theorem 1, we compare the sets of committed and notified versions scenario by scenario (Table 2). The simulator is an independent implementation of the model, so these comparisons check the proofs; they cannot check the model's assumptions.
+
+**Table 2.** Paired per-scenario check of Theorem 1.
+
+| Earlier release | Later release | Notified-set violations | Commit-set violations | Prevention lost | Fewer superseded notifications | World-stale commit added |
+| --- | --- | --- | --- | --- | --- | --- |
+| eager | guarded_0 | 0 | 0 | 0 | 398 | 48 |
+| guarded_0 | guarded_200 | 0 | 0 | 0 | 152 | 48 |
+| guarded_200 | guarded_500 | 0 | 0 | 0 | 228 | 72 |
+| guarded_0 | wait | 0 | 0 | 0 | 328 | 72 |
+| eager | release_gate | 0 | 0 | 0 | 398 | 0 |
+
+Each row: 1,764 paired scenarios. Violation and loss columns count scenarios that contradict Theorem 1; the last two columns count scenarios.
+
+No scenario contradicts Theorem 1, and Guarded(0) has strictly fewer superseded notifications than Eager in 398 scenarios. The release gate and Guarded(0) notify identical version sets in 1,764 of 1,764 scenarios (Corollary 2), and Corollary 1 reproduces 5,184 of 5,184 single-change outcomes across the six fenced policies. The world-stale column is the exception predicted in Section 4.3: Guarded(0) adds world-stale commits relative to Eager in 48 scenarios, so it does not dominate Eager on every outcome, while the release gate adds none. Guarded(500) and Wait are not ordered, and each has strictly fewer superseded notifications in some scenarios (98 and 146), so their aggregate ranking reflects grid weighting only.
+
+### 6.2 Any endpoint decision
+
+We replaced E with endpoint decisions of 600 (early), 800, 1,000, 1,200 and 1,400 ms (late) and compared Eager with each successively later gate over all 1,764 scenarios. The five steps produce 0 notified-set or commit-set violations in total and strictly reduce superseded notifications in 162, 102, 146, 152 and 144 scenarios respectively. Every gate, even one 400 ms before the nominal end of the turn, is never worse than Eager on notifications, commits or prevention; as Section 4.3 explains, world-stale database commits are the exception.
+
+### 6.3 Corrections during versus after the turn
+
+**Table 3.** Superseded notifications for corrections during and after the original turn.
+
+| Policy | Correction during turn | Correction after turn |
+| --- | --- | --- |
+| wait | 3.17% | 44.71% |
+| eager | 49.74% | 89.42% |
+| guarded_0 | 5.56% | 82.01% |
+| guarded_200 | 0.79% | 68.25% |
+| guarded_500 | 0.00% | 41.27% |
+| release_gate | 5.56% | 82.01% |
+
+Superseded-notification incidence. Denominators: 756 changed scenarios with first change before E and 756 at or after E, per policy.
+
+These rates depend on the chosen change times and durations and illustrate Corollary 1 on this grid; they do not estimate deployed behaviour. For corrections made during the original turn, the gate at the endpoint reduces superseded notifications from 49.74% (Eager) to 5.56% (Guarded(0) and the release gate) at the same acknowledgement latency. The residue arises where a receipt falls after the gate (Corollary 1), through delivery delay or a chain's second revision landing after the turn. For changes of mind after the turn, a zero-cost gate barely helps (89.42% to 82.01%). Protecting against them requires holding beyond the endpoint, as Guarded(500) does (41.27%), at a latency cost: the genuine trade-off.
+
+### 6.4 Aggregate outcomes
+
+Across all 1,764 scenarios, every fenced configuration reaches 100% final-state correctness with no known-stale commit (Propositions 1 and 2). On the 1,512 changed scenarios, superseded-notification incidence ranges from 20.63% for Guarded(500) to 69.58% for Eager, with 43.78% for Guarded(0) and the release gate. Stable residual latency is 66.7 ms for Eager, Guarded(0) and the release gate, although mean commit times are about 600 and 1,066.7 ms; it is 200 and 500 ms for Guarded(200) and Guarded(500) and 600.0 ms for Wait. 
+**Table 4.** Aggregate outcomes over the full grid.
 
 | Policy | Final correct | Known-stale commit | World-stale commit | Superseded notification* | Stable latency (ms) |
 | --- | --- | --- | --- | --- | --- |
@@ -168,118 +210,89 @@ Twenty-eight unit and invariant tests cover analytic stable latency, cancellatio
 | guarded_0 | 100.00% | 0.00% | 9.52% | 43.78% | 66.7 |
 | guarded_200 | 100.00% | 0.00% | 8.84% | 34.52% | 200.0 |
 | guarded_500 | 100.00% | 0.00% | 7.48% | 20.63% | 500.0 |
+| release_gate | 100.00% | 0.00% | 12.24% | 43.78% | 66.7 |
 | guarded_no_fence | 79.37% | 55.10% | 62.13% | 100.00% | 66.7 |
 
 Each policy: 1,764 runs. *Changed-scenario denominator: 1,512 per policy. Stable latency: 36 stable scenarios per policy.
 
-Every fenced configuration reaches 100% final-state correctness in this finite grid. That result is expected under Proposition 2 and should be read as an implementation check under favourable recovery assumptions. It does not establish 100% reliability for real agents.
+### 6.5 Prevention differs from recovery
 
-Notification histories distinguish these otherwise identical final-state outcomes. Eager execution has a 69.58% superseded-notification incidence on changed scenarios. Guarded(0) reduces it to 43.78%, while the stable-case mean residual settlement latency remains 66.7 ms for both. Wait reduces superseded notifications further but incurs 600.0 ms stable-case mean latency. Guarded(200) and Guarded(500) reduce retrospective supersession further while increasing stable-case latency. No policy dominates under every weighting of timeliness and historical effects.
+**Table 5.** Prevention and recovery in cancellation scenarios.
 
-### 6.2 Prevention differs from recovery
+| Policy | Cancellation scenarios | No database commit | No notification emitted | Final empty database |
+| --- | --- | --- | --- | --- |
+| wait | 216 | 75.93% | 78.70% | 100.00% |
+| eager | 216 | 27.78% | 32.41% | 100.00% |
+| guarded_0 | 216 | 50.00% | 57.41% | 100.00% |
+| guarded_200 | 216 | 61.11% | 66.67% | 100.00% |
+| guarded_500 | 216 | 77.78% | 80.56% | 100.00% |
+| release_gate | 216 | 27.78% | 57.41% | 100.00% |
+| guarded_no_fence | 216 | 0.00% | 0.00% | 50.00% |
 
-| Policy | Cancellation scenarios | Prevented any commit | Final empty database |
-| --- | --- | --- | --- |
-| wait | 216 | 75.93% | 100.00% |
-| eager | 216 | 27.78% | 100.00% |
-| guarded_0 | 216 | 50.00% | 100.00% |
-| guarded_200 | 216 | 61.11% | 100.00% |
-| guarded_500 | 216 | 77.78% | 100.00% |
-| guarded_no_fence | 216 | 0.00% | 50.00% |
+All fenced policies recover the empty state, yet prevention differs widely, so a metric restricted to final database correctness would erase the distinction. The release gate separates the two effect classes: it prevents the database write as rarely as Eager (27.78%) but prevents the notification exactly as often as Guarded(0) (57.41%), as Corollary 2 implies. An emitted notification survives compensation even when the database later becomes empty.
 
-All fenced policies recover the final empty state in cancellation cases. Their prevention rates differ because some have already committed before receiving cancellation. Thus a metric restricted to final database correctness would erase a major distinction among policies. An emitted notification survives compensation even when the database subsequently becomes empty.
+### 6.6 Delayed corrections
 
-### 6.3 Delayed corrections
+**Table 6.** World-stale commit incidence by delivery delay.
 
 | Policy | d = 0 ms | d = 100 ms | d = 350 ms |
 | --- | --- | --- | --- |
 | wait | 0.00% | 14.29% | 23.81% |
 | eager | 0.00% | 19.05% | 23.81% |
 | guarded_0 | 0.00% | 9.52% | 23.81% |
+| guarded_200 | 0.00% | 7.14% | 23.81% |
 | guarded_500 | 0.00% | 4.76% | 21.43% |
+| release_gate | 0.00% | 19.05% | 23.81% |
 
 World-stale commit incidence among changed scenarios: 504 per policy and delivery-delay setting.
 
-With zero delivery delay, fenced policies produce no world-stale commits on changed scenarios. Positive delay creates exposure. Longer gating reduces some exposure but does not eliminate it. Timing values are coarse and deliberately chosen; these rates do not imply that actual message delivery follows this distribution.
+With zero delay, W = R and no fenced policy commits world-stale (Proposition 1); positive delay creates exposure that gating reduces but cannot remove (Proposition 3). Wait never commits earlier than Guarded(0) yet shows more world-stale commits at d = 100 ms, because its later commits fall inside the delivery interval of corrections at 1,050 and 1,350 ms (Section 4.3).
 
-### 6.4 Fencing ablation
+### 6.7 Fencing ablation and counterexample
 
-Guarded-no-fence reaches 79.37% final correctness overall. Its correctness is 91.36% for one-revision cases, 50.00% for cancellation and 69.14% for revision chains; stable and interruption cases remain correct. A common failure is that a slow initial preparation commits after a faster replacement. Another is a pending old operation committing after cancellation was processed while the database was still empty. No compensation was scheduled at that receipt because no effect existed yet.
+Guarded-no-fence reaches 79.37% final correctness (91.36% for revisions, 50.00% for cancellations, 69.14% for chains). With P0 = 1,200 ms, a revision at 150 ms and P1 = 100 ms, the original becomes ready after the revision has committed: fenced, it is rejected; unfenced, it overwrites room 503 with 305. The ablation shows why late completions must be fenced, not superiority over published systems.
 
-This ablation is intentionally weaker than a correctly implemented cancellable runtime. It diagnoses why ignoring late completions is necessary; it does not show superiority over published voice-agent systems.
+### 6.8 Authoritative-boundary testbed
 
-### 6.5 Controlled authoritative-boundary validation
-
-We added a separate local asynchronous testbed with eight deterministic cases. Each case injects a correction before tool entry, after an application authorization check, after database commit but before notification, or after notification. We compare an application-check-only implementation with one that checks the current intent version atomically at both database and notification boundaries. The testbed uses SQLite and controlled coroutine barriers; it contains no speech model, remote service, or external notification delivery.
-
-The cases reproduce the simulator's metric distinction. An application check followed by an unguarded write accepts an obsolete write when cancellation arrives after the check. An authoritative version predicate rejects that write. When a write has occurred, compensation can restore the database while prevention remains false. When a notification has been accepted, the database can be empty at quiescence while the notification remains in history. These are executable contract examples, not failure-rate estimates or tests of the upstream voice-agent implementations.
-
-### 6.5 Worked counterexample
-
-Take an initial preparation of 1200 ms, a revision at 150 ms, a revised preparation of 100 ms, zero delivery delay and Guarded(0). The revised operation is ready at 250 ms and waits until 1000 ms to commit. The original operation is ready at 1200 ms. With fencing, that old completion is rejected because version 2 has already been received. Without fencing, it replaces room 503 with room 305 at 1200 ms. Both histories are available as event traces, and the corresponding behaviour is checked by tests.
-
-### 6.6 Open-data interaction stress test
-
-We downloaded the four public Full-Duplex-Bench v1.5 categories and processed
-498 metadata records outside the repository [10]. The source categories comprise
-200 user-interruption, 99 user-backchannel, 100 talking-to-other and 199
-background-speech records. We deliberately did not reinterpret these labels
-as cancellation ground truth. The 200 user-interruption records were marked
-unclassified, and the remaining 298 records were retained as
-non-cancellation-overlap controls. Consequently, this release reports zero
-explicit cancellation records and zero cancellation-policy evaluations from
-the open audio. The result validates the metadata/replay boundary and exposes
-the need for a separate audio-and-task annotation study; it does not validate
-the cancellation policies on real speech.
-
-| Source category | Records | Treatment | Evidence status |
-| --- | ---: | --- | --- |
-| User interruption | 200 | Unclassified | Overlap label is not cancellation ground truth |
-| User backchannel | 99 | Non-cancellation-overlap control | Negative control only |
-| Talking to other | 100 | Non-cancellation-overlap control | Negative control only |
-| Background speech | 199 | Non-cancellation-overlap control | Negative control only |
-| **Total** | **498** |  | **0 explicit cancellation records** |
+A SQLite testbed with controlled coroutine barriers injects a correction before tool entry, after an application-level check, after the commit, or after the notification (eight cases). An application check followed by an unguarded write accepts an obsolete write; a version predicate at the write rejects it. Compensation restores the database without restoring prevention, and an accepted notification survives an empty final database. We also extracted the tool-dispatch functions of two pinned public implementations, the Speculative Actions retail tools [19] and an OpenAI Realtime agent [20], and retracted authorization before tool entry. Neither accepts an intent version, so both produced the effect; a local version check suppressed it. The fence is thus absent at those interfaces and implementable at a real write boundary; these are not failure-rate estimates or claims about the full systems.
 
 ## 7. Discussion
 
-The results support a diagnostic claim rather than a model-performance claim. Final-state recovery, prevention and historical effects must be reported separately. A runtime that always converges can still execute work that users later supersede. Conversely, retrospectively superseded work is not necessarily a violation of the instruction available when it ran. The separate world-stale metric makes that temporal distinction explicit.
+The runtime rule is: carry intent versions to the authoritative commit and dispatch boundaries, and never release an irreversible effect before the system's own endpoint decision. By Proposition 4 and Theorem 2 this costs nothing a user can perceive; reversible work can proceed early (Corollary 2). Beyond the endpoint, holding longer trades latency for protection against later changes of mind, a single parameter with a proven floor whose value needs domain costs we do not estimate. Cancellation acknowledgements should also distinguish “prevented,” “compensated,” “notification already emitted” and “outcome unknown.”
 
-Preparation overlap is attractive when preparation is read-only, reusable and cheap enough not to cause contention. The stable-case latency equation quantifies that idealized opportunity. It does not justify overlapping an irreversible action with incomplete authorization. Where preparation consumes scarce resources, creates reservations or triggers billing, its side effects must enter the model rather than being treated as free.
+The practical gain depends on how often a correction arrives after a tool is ready but before the endpoint (Corollary 1). If real tools usually outlast the remaining utterance, that window is empty and the gate coincides with Eager. Measuring it needs tool-latency logs and timed self-repair data, not more simulation. A reliable execution layer also cannot fix a wrong intent stream: misclassified interruptions, missed corrections and misattributed speakers are likely dominant real failures.
 
-The model also suggests precise runtime contracts. Operations should carry intent versions to the authoritative commit and notification boundaries. A cancellation acknowledgment should distinguish “prevented,” “database effect compensated,” “notification already emitted” and “outcome unknown.” Those are suggested interface semantics; this experiment does not measure user comprehension or implement spoken acknowledgments.
+## 8. Limitations
 
-The absence of model inference is both useful and limiting. It isolates execution bugs without confounding them with speech transcription. It also removes a likely dominant source of real failure: misclassifying an interruption as cancellation, missing a correction or attributing another speaker's instruction to the user. A reliable execution layer cannot fix the wrong intent stream.
+**Assumptions of the theorems.** The intent stream is exogenous. This is plausible for half-duplex agents but not for the full-duplex agents of [1, 2, 3, 5], which can act or backchannel mid-turn. There, early feedback such as “sending to 305” may draw out a correction sooner, and an eager policy with feedback could outperform the gate; that case is open. Acknowledgement waits for the authoritative commit. Third parties receive held notifications up to Ê - (r + P) later, so latency-critical external actions are excluded. The fence is evaluated atomically, or with a fixed race window for external channels (Section 4.3). Preparation has no external side effects; holds, reservations and billing are effects and must be gated too.
 
-## 8. Limitations and End-to-End Validation
+**Construct validity.** The experiments use one assignment and an immutable log (Theorem 1 does not need this); compensation always succeeds, though a field returning to empty need not restore business reality. Durations are chosen, not fitted. Intent parsing is perfect, with no ASR system, language model or participant. Crashes, duplicates and remote write uncertainty are not modeled.
 
-**Construct validity.** The task is a single mutable assignment and immutable notification log. It omits multi-resource dependencies, booking constraints, dispatch acceptance, payment settlement and genuinely irreversible physical work. Compensation is successful and has simple semantics. A database field returning to its initial value need not restore business reality.
-
-**Timing validity.** Virtual durations are selected experimental factors rather than fitted service-time distributions. Preparation has unlimited concurrency and no cost model. The fixed original-turn gate is not a production endpoint detector. Equality-boundary priority is favourable to received corrections and may differ from a real event loop.
-
-**Recognition and authorization.** Intent parsing is perfect, event ordering is preserved and each revision has a known version. No microphone, ASR system, LLM, human participant or external service is involved. Neither the rates nor the theoretical properties validate any commercial or open-source voice model.
-
-**Recovery and infrastructure.** Delivery is reliable, compensation never fails, and there are no duplicate requests or retries. Idempotency, crash recovery, persistent outboxes, reordered messages, remote write uncertainty and resource locking are not tested. The atomic fence is an assumption, not a demonstrated distributed protocol.
-
-**External validity and novelty.** The aggregate weights are synthetic. Scenario variants are not independent human observations; significance tests or population confidence intervals would be misleading. Existing voice harnesses already address cancellation, replacement, speculative execution and confirmation. Our upstream code probes are narrow and do not establish a defect or priority claim. The controlled runtime testbed demonstrates a contract and metric distinction, but a stronger publication still needs complete-system adapters and real tool/notification measurements.
-
-The open-data stress test has additional limits. Full-Duplex-Bench v1.5
-contains overlap categories rather than task-level cancellation labels, so the
-conservative annotation produces no cancellation ground truth. Audio endpoint
-ambiguity, dataset-specific speaking styles and the upstream license terms
-also limit generalization. The downloaded source archives remain outside the
-public repository.
-
-A follow-up should freeze a versioned scenario specification, collect consented human speech containing corrections and non-cancelling interruptions, and annotate source intent and correction timing independently. It should compare cascaded and direct-audio systems on identical tool interfaces, record both oracle and predicted intent streams, and introduce delivery failures and retries. Measurements should include actual audio endpoints, database effects, notification effects, cancellations acknowledged incorrectly and compute cost. Those experiments have not been conducted here.
+**Real speech.** The 498 public Full-Duplex-Bench v1.5 metadata records [10] cannot supply cancellation ground truth: their labels describe overlap, not task intent. A follow-up needs consented speech with independently annotated corrections and measured tool, notification and endpoint timings.
 
 ## 9. Conclusion
 
-In a deterministic oracle-intent model, final database correctness is insufficient to characterize voice-agent cancellation. Version fencing prevents commits stale relative to received intent and, with reliable compensation, ensures convergence in the modeled setting. It does not prevent effects stale relative to corrections still in transit, nor erase notifications already emitted. The controlled boundary test shows why these outcomes require separate checks and acknowledgment states. Early preparation with a commit gate changes the latency and supersession trade-off without requiring a new language model, but it does not dominate the added debounce baseline. The released artifact makes these distinctions executable and auditable. Claims about real speech systems and publication-level novelty remain open to further evidence.
+Final database correctness cannot characterize voice-agent cancellation, because irreversible effects survive compensation. When the user cannot observe effects before the endpoint, fencing makes later release monotone in every run. A gate at the system's own endpoint decision is therefore free in acknowledgement latency and optimal among causal policies that add none, and a gate holding only irreversible effects weakly dominates eager execution at a bounded delay to third parties. Corrections in transit remain unfenceable, and stale database writes are not monotone in delay. The gain in deployed systems depends on how often tools finish before users stop speaking.
 
-## Research Integrity, Assistance and Availability
+## Declaration of Competing Interest
 
-This manuscript, experiment design, simulator, tests and literature notes were substantially developed with an AI coding assistant at the author's request. The numerical results come from executing the included simulator; no speech-model scores, participant counts or production measurements have been invented. The author has completed an independent review of the manuscript, implementation, proofs and references. The author confirms the listed name and independent-researcher affiliation; the ORCID is listed above.
+The author declares no competing interests. The work was carried out independently of Quickgen Technologies (SMC-Private) Limited, which did not fund it, and no company data, recordings, customer records or products were used.
 
-No newly collected human-subject data, private hotel records, clinical information, credentials or production endpoints were used. The open-data stress test processed public human speech from Full-Duplex-Bench v1.5 under its source terms; source audio and transcripts are not redistributed in this repository. All room identifiers and synthetic events are fictional. Code, generated scenarios, evaluation scripts, aggregate results and manuscript sources are available at https://github.com/qalab-e-hassnain/cancelbench. No DOI or arXiv identifier is claimed. Software is offered under the repository's MIT license; the manuscript's publication license remains for the author to select.
+## Funding
+
+This research did not receive any specific grant from funding agencies in the public, commercial or not-for-profit sectors, and it was not funded by Quickgen Technologies.
+
+## CRediT Authorship Contribution Statement
+
+Qalab Hassnain Agha: Conceptualization, Methodology, Software, Formal analysis, Investigation, Validation, Writing: original draft, Writing: review and editing.
+
+## Data Availability
+
+The simulator, scenario grid, event traces, paired-check results, audit program, tests and manuscript sources are openly available at https://github.com/qalab-e-hassnain/cancelbench under the MIT license. Public Full-Duplex-Bench v1.5 metadata was processed under its terms and is not redistributed. No new human-subject data were collected, and all room identifiers and events are fictional.
+
+## Declaration of Generative AI and AI-Assisted Technologies
+
+During the preparation of this work the author used Claude Code (Anthropic), an AI coding assistant, to help implement the simulator and tests, draft and revise manuscript text, and draft proofs and literature notes. All numerical results come from executing the released code; the assistant generated no scores, participants or measurements. After using this tool, the author reviewed and edited the content as needed and takes full responsibility for the content of the publication.
 
 ## References
 
@@ -295,16 +308,35 @@ No newly collected human-subject data, private hotel records, clinical informati
 
 [6] Naimeng Ye, Arnav Ahuja, Georgios Liargkovas, Yunan Lu, Kostis Kaffes, and Tianyi Peng. Speculative Actions: A Lossless Framework for Faster Agentic Systems. arXiv:2510.04371, version 2, 2026. https://arxiv.org/abs/2510.04371v2
 
-[7] Hector Garcia-Molina and Kenneth Salem. Sagas. ACM SIGMOD, 1987. Author technical-report version: https://www.cs.princeton.edu/techreports/1987/070.pdf
+[7] Hector Garcia-Molina and Kenneth Salem. Sagas. In Proceedings of ACM SIGMOD, 1987. Author technical-report version: https://www.cs.princeton.edu/techreports/1987/070.pdf
 
-[8] David Schlangen and Gabriel Skantze. A General, Abstract Model of Incremental Dialogue Processing. Dialogue & Discourse 2(1), 83–111, 2011. https://clp.ling.uni-potsdam.de/publications/Schlangen-2011.pdf
+[8] David Schlangen and Gabriel Skantze. A General, Abstract Model of Incremental Dialogue Processing. Dialogue & Discourse 2(1), 83-111, 2011. https://clp.ling.uni-potsdam.de/publications/Schlangen-2011.pdf
 
 [9] Coleman Hooper, Minwoo Kang, Suhong Moon, Nicholas Lee, Eric Wen, John Wawrzynek, Michael W. Mahoney, Yakun Sophia Shao, Amir Gholami, and Kurt Keutzer. Speculative Interaction Agents: Building Real-Time Agents with Asynchronous I/O and Speculative Tool Calling. arXiv:2605.13360, 2026. https://arxiv.org/abs/2605.13360
 
 [10] Guan-Ting Lin, Jiachen Lian, Tingle Li, Qirui Wang, Gopala Anumanchipalli, Alexander H. Liu, and Hung-yi Lee. Full-Duplex-Bench: A Benchmark to Evaluate Full-Duplex Spoken Dialogue Models on Turn-Taking Capabilities. v1.5 dataset release, 2025. https://github.com/DanielLin94144/Full-Duplex-Bench/tree/main/v1_v1.5
 
-## Appendix A. Reproduction
+[11] E. N. Elnozahy, Lorenzo Alvisi, Yi-Min Wang, and David B. Johnson. A Survey of Rollback-Recovery Protocols in Message-Passing Systems. ACM Computing Surveys 34(3), 375-408, 2002.
 
+[12] Robert E. Strom and Shaula Yemini. Optimistic Recovery in Distributed Systems. ACM Transactions on Computer Systems 3(3), 204-226, 1985.
+
+[13] Edmund B. Nightingale, Kaushik Veeraraghavan, Peter M. Chen, and Jason Flinn. Rethink the Sync. In Proceedings of the 7th USENIX Symposium on Operating Systems Design and Implementation (OSDI), 2006.
+
+[14] Gabriel Skantze. Turn-Taking in Conversational Systems and Human-Robot Interaction: A Review. Computer Speech & Language 67, 101178, 2021.
+
+[15] Willem J. M. Levelt. Monitoring and Self-Repair in Speech. Cognition 14(1), 41-104, 1983.
+
+[16] Elizabeth E. Shriberg. Preliminaries to a Theory of Speech Disfluencies. PhD thesis, University of California, Berkeley, 1994.
+
+[17] Mike Burrows. The Chubby Lock Service for Loosely-Coupled Distributed Systems. In Proceedings of the 7th USENIX Symposium on Operating Systems Design and Implementation (OSDI), 2006.
+
+[18] H. T. Kung and John T. Robinson. On Optimistic Methods for Concurrency Control. ACM Transactions on Database Systems 6(2), 213-226, 1981.
+
+[19] Speculative Actions reference implementation, retail tools, commit dc938b9. https://github.com/naimengye/speculative-action
+
+[20] Veris AI. riley-agent, openai-realtime-mini variant, commit f54b220. https://github.com/veris-ai/riley-agent
+
+## Appendix A. Reproduction
 
 Run from the repository root using Python 3.9 or newer:
 
@@ -315,13 +347,13 @@ PYTHONPATH=src python3 -m cancelbench.audit --results results
 python3 scripts/build_paper.py
 ```
 
-The build script inserts measured tables into the manuscript template and produces Markdown, HTML and LaTeX versions. The LaTeX source is provided for compilation with a local TeX installation. The manifest identifies the exact simulator source and experiment artifacts. Repeat execution should produce byte-identical experiment artifacts on the same interpreter; the recorded interpreter version intentionally distinguishes environments.
+The run writes `monotonicity.json` with the paired checks, endpoint sweep, closed-form check and turn strata reported in Section 6. The build script inserts measured tables into the manuscript template and produces Markdown, HTML and LaTeX versions. Repeat execution produces byte-identical experiment artifacts on the same interpreter; the manifest records the interpreter version.
 
 ## Appendix B. Minimal Execution Pseudocode
 
 ```text
 on substantive receipt(version, target):
-    latest_received_version = version
+    latest_received_version = max(latest_received_version, version)
     if database is nonempty:
         schedule compare-and-clear(database.version) after C
     if target is not cancellation:
@@ -331,7 +363,7 @@ on scheduled commit(operation):
     atomically:
         reject unless operation.version == latest_received_version
         database = (operation.version, operation.target)
-    schedule notification after N
+    schedule notification at policy release time (commit + N, or max(commit, E) + N)
 
 on notification(operation):
     atomically:
@@ -339,4 +371,4 @@ on notification(operation):
         append operation to immutable notification history
 ```
 
-Guarded-no-fence omits the two version checks. Scheduled obsolete preparations may still finish in fenced configurations, but their commits are rejected. Cancellation therefore invalidates authorization for pending effects rather than necessarily preempting the preparation computation itself.
+Guarded-no-fence omits the two version checks. Obsolete preparations may still finish in fenced configurations, but their releases are rejected: cancellation invalidates authorization for pending effects rather than preempting the computation.

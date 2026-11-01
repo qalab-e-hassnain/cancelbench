@@ -1,25 +1,27 @@
 {
   "experiment": "cancelbench-fixed-grid-v1",
   "time_unit": "virtual milliseconds",
-  "python": "3.14.6",
+  "python": "3.10.13",
   "scenario_count": 1764,
-  "run_count": 10584,
+  "run_count": 12348,
   "scenario_sha256": "06c7052a9356eacba860d370fd7c7cf20d7ff1f90ec1b91f67ecca2e38f85f2a",
   "source_sha256": {
     "__init__.py": "03e54c463149ba702dac409dc5d0b0b063c6527f216655bcb30bc698fe1fe1b7",
-    "audit.py": "45d2feb73e2e215ba97ca924c9739bb8b5c85b1798de64bd7183b823076488a2",
+    "audit.py": "3cb7f69b5c89c1738f454e0bb7b4d67789ed237d3c116b69f9f77af28ff0b7e5",
     "demo.py": "0906b27f3d7c0b4f7458aa8c2285fbe4ce904d8a3dc490c275c8372c89de12e5",
-    "run.py": "168f943b4466030bede503b5956aa9449471dfd618da78fd9705223a0c1a5db4",
-    "simulator.py": "8b7c8dda4e23e30975f96fe627a7f957b1130ea220469ee82bc5152675b141b9"
+    "monotonicity.py": "2ad40e6180efe34ef0ebbb8869c908ae0e70e3e67630cdeb6bbf2126eabc88ba",
+    "run.py": "91b3e1789233e8e5654a72ca1116afaf0f250e81b2a153127d97d1b1862efd70",
+    "simulator.py": "8fd194efc1b32b93f7d5531dd18cc3ff0129a33f8d4cd661cec46d894f4059ff"
   },
   "artifacts_sha256": {
-    "by_kind.json": "c2c2fd9156d7c1f8b822c2b9d5cdaf901d2b33744523c9b1f89d2dd4096a4253",
-    "runs.csv": "ba85774a8bbd8a18e2dd00d5fdca3188563bc9de7154c85cc3b9327e4971096a",
+    "by_kind.json": "ae59ba305dcb2d7c41742ded3a95fff8db1dde92e680f9443abc9b6273062e9d",
+    "monotonicity.json": "6dc8834331562a3bf8f05a4f5c4c7ab9c5035324686c57849ec5ca1062bc7fa1",
+    "runs.csv": "7614ea628a3eafe50962edfee0164bc6e0032dcc88326e2e050f381d0ae7711f",
     "scenarios.jsonl": "06c7052a9356eacba860d370fd7c7cf20d7ff1f90ec1b91f67ecca2e38f85f2a",
-    "sensitivity.json": "a8abc3fca168ccd7771459a0ca93387615192131adb3deaf97abfc04cc81d264",
-    "summary.json": "9eab62dbc16fd8d64927ed691f0741dd4fc71d2551ece55898c266e977e3e8c4",
-    "summary.md": "cec4bf600148866b6a7e03ae3086181f5f5a3df23a38832dcea821eb7229b82d",
-    "traces.jsonl.gz": "5bab7989bc93ea9d8a675a03c9e8d22e252f36e3d63c8c526ad30e9f9295f6e0"
+    "sensitivity.json": "8454c58ebda22261937bf1037b0903b9b7dbfdb4624354b611d1730cca14935b",
+    "summary.json": "0337c7f0c0fccebb36a1d8c21cce39a7f3d611bc91075f93150f6e82edc6a225",
+    "summary.md": "d519817f1922651c42da3573e8853f9bcc24b6024b167f2647118acd903e8ebd",
+    "traces.jsonl.gz": "00e6612f9c8625f92467f1fc44328db2ab6c3f2a9ae798f67c838c40648b716d"
   },
   "scope": "Oracle intent events; no audio, LLM, network, real SQL or human participants."
 }

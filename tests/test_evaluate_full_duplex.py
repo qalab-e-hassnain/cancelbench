@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from cancelbench.simulator import POLICIES
 from scripts.evaluate_full_duplex import evaluate
 
 
@@ -39,7 +40,7 @@ class FullDuplexEvaluationTests(unittest.TestCase):
                 }
             }))
             rows = evaluate(metadata, annotations)
-            self.assertEqual(len(rows), 6)
+            self.assertEqual(len(rows), len(POLICIES))
             self.assertTrue(all(row["status"] == "evaluated" for row in rows))
 
 
